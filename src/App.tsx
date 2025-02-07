@@ -1,35 +1,91 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { useState, useEffect } from 'react';
+import { Container, TextField, Grid, Card, CardMedia, CardContent, Typography, Pagination, Divider } from '@mui/material';
+import axios from 'axios';
+import './App.css';
 
-function App() {
-  const [count, setCount] = useState(0)
-
-  return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
+interface Recipe {
+  id: number;
+  name: string;
+  ingredients: string[];
+  cuisine: string;
+  instructions: string;
 }
 
-export default App
+function App() {
+  const [recipes, setRecipes] = useState<Recipe[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  useEffect(() => {
+    fetchRecipes();
+  }, [page]);
+
+  const fetchRecipes = async () => {
+    try {
+      const response = await axios.get(`https://dummyjson.com/recipes?limit=10&skip=${(page - 1) * 10}`);
+      setRecipes(response.data.recipes);
+      setTotalPages(Math.ceil(response.data.total / 10));
+    } catch (error) {
+      console.error('Error fetching recipes:', error);
+    }
+  };
+
+  const handleSearch = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchTerm(event.target.value);
+    try {
+      const response = await axios.get(`https://dummyjson.com/recipes/search?q=${event.target.value}`);
+      setRecipes(response.data.recipes);
+      setTotalPages(Math.ceil(response.data.total / 10));
+    } catch (error) {
+      console.error('Error searching recipes:', error);
+    }
+  };
+
+  const handlePageChange = (event: React.ChangeEvent<unknown>, value: number) => {
+    setPage(value);
+  };
+
+  return (
+    <Container>
+    <TextField
+      label="Search Recipes"
+      variant="outlined"
+      fullWidth
+      margin="normal"
+      value={searchTerm}
+      onChange={handleSearch}
+    />
+    <Grid container spacing={2}>
+      {recipes.map((recipe) => (
+        <Grid item sm={12} md={6} key={recipe.id}>
+          <Card>
+            <CardMedia
+              component="img"
+              height="240"
+              image={`https://cdn.dummyjson.com/recipe-images/${recipe.id}.webp`}
+              alt={recipe.name}
+            />
+            <CardContent>
+              <Typography variant="h5" component="div">
+                {recipe.name}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Cuisine: {recipe.cuisine}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Ingredients: {recipe.ingredients.join(', ')}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Instructions: {recipe.instructions}
+              </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+      ))}
+    </Grid>
+    <Pagination count={totalPages} page={page} onChange={handlePageChange} />
+  </Container>
+  );
+}
+
+export default App;
